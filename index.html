@@ -20,7 +20,7 @@
             --accent: #dcfd8b;
             --accent-hover: #bc84ee;
             
-            /* Board square definitions will be updated dynamically via JS */
+            /* Board square definitions */
             --board-light: #f3f0df;
             --board-dark: #005088;
             --board-highlight: rgba(188, 132, 238, 0.5);
@@ -335,6 +335,14 @@
             align-items: center;
         }
 
+        .piece img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+            -webkit-user-drag: none;
+        }
+
         .piece svg {
             width: 100%;
             height: 100%;
@@ -421,9 +429,11 @@
             padding: 6px;
         }
 
+        .captured-tray img,
         .captured-tray svg {
             width: 24px;
             height: 24px;
+            object-fit: contain;
         }
 
         /* Navigation Buttons */
@@ -683,7 +693,16 @@
             ['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR']
         ];
 
-        /* 2. PROCEDURAL SOUND SYNTHESIS (Web Audio API) */
+        /* 2. DYNAMIC PATH CONFIGURATION FOR DUCK PIECES */
+        const POSSIBLE_IMAGE_PATHS = [
+            'assets/',
+            'pieces/',
+            'images/',
+            'img/',
+            ''
+        ];
+
+        /* 3. PROCEDURAL SOUND SYNTHESIS (Web Audio API) */
         let audioCtx = null;
         function playSound(type) {
             try {
@@ -733,34 +752,53 @@
             }
         }
 
-        /* 3. DYNAMIC VECTOR DUCK RENDERER */
-        // We generate custom Duck SVGs dynamically to ensure crisp high-resolution piece renders!
-        function getPieceSVG(pieceCode) {
+        /* 4. CHESS PIECE RENDERER (NATIVE CHANNELS + GRACEFUL VECTOR FALLBACK) */
+        function getPieceHTML(pieceCode) {
+            let pathIndex = 0;
+            const primaryPath = `${POSSIBLE_IMAGE_PATHS[pathIndex]}${pieceCode}.png`;
+            return `
+                <img src="${primaryPath}" 
+                     alt="${pieceCode}" 
+                     class="duck-piece-img"
+                     onerror="handlePieceLoadError(this, '${pieceCode}', ${pathIndex + 1})"/>
+            `;
+        }
+
+        // Global recovery callback for missing piece assets
+        window.handlePieceLoadError = function(imgElement, pieceCode, nextIndex) {
+            if (nextIndex < POSSIBLE_IMAGE_PATHS.length) {
+                imgElement.src = `${POSSIBLE_IMAGE_PATHS[nextIndex]}${pieceCode}.png`;
+                imgElement.setAttribute('onerror', `handlePieceLoadError(this, '${pieceCode}', ${nextIndex + 1})`);
+            } else {
+                const parent = imgElement.parentElement;
+                if (parent) {
+                    parent.innerHTML = getPieceFallbackSVG(pieceCode);
+                }
+            }
+        };
+
+        // Procedural Vector Duck pieces (Fallback when PNG files are missing)
+        function getPieceFallbackSVG(pieceCode) {
             const isBlack = pieceCode.startsWith('b');
             const type = pieceCode.substring(1);
             
-            // Theme adaptation colors for ducks
-            let bodyColor = isBlack ? "#334155" : "#fef08a"; // Dark charcoal or classic yellow duckling
+            let bodyColor = isBlack ? "#334155" : "#fef08a";
             let cheekColor = isBlack ? "#475569" : "#fca5a5";
-            let beakColor = "#f97316"; // Bright orange bills
-            let accessoryColor = isBlack ? "#d9f99d" : "#c084fc"; // Contrasting crown colors etc
+            let beakColor = "#f97316";
+            let accessoryColor = isBlack ? "#d9f99d" : "#c084fc";
             
             if (boardTheme === 'cyber') {
-                bodyColor = isBlack ? "#4c1d95" : "#06b6d4"; // Cyan and Purple matrix vibes
+                bodyColor = isBlack ? "#4c1d95" : "#06b6d4";
                 accessoryColor = isBlack ? "#00ffff" : "#ff00ff";
             } else if (boardTheme === 'sanctuary') {
-                bodyColor = isBlack ? "#334155" : "#f8fafc"; // White feathers
+                bodyColor = isBlack ? "#334155" : "#f8fafc";
                 accessoryColor = "#38bdf8";
             }
 
-            // Accessories logic (hats, crowns, helmets) based on piece type
             let accessorySVG = "";
-            
             if (type === 'P') {
-                // Pawn - Cute baby duckling. Little pacifier/bow
                 accessorySVG = `<circle cx="50" cy="35" r="5" fill="${accessoryColor}" />`;
             } else if (type === 'R') {
-                // Rook - Medieval castle turret helm
                 accessorySVG = `
                     <rect x="35" y="10" width="30" height="20" rx="3" fill="#64748b" />
                     <rect x="32" y="5" width="8" height="10" fill="#64748b" />
@@ -768,26 +806,22 @@
                     <rect x="60" y="5" width="8" height="10" fill="#64748b" />
                 `;
             } else if (type === 'N') {
-                // Knight - Iron Knight visor helmet with colorful plume
                 accessorySVG = `
                     <ellipse cx="50" cy="28" rx="22" ry="18" fill="#475569" />
                     <rect x="42" y="24" width="16" height="5" fill="#1e293b" />
                     <path d="M 50 10 Q 65 -5 70 10" stroke="${accessoryColor}" stroke-width="6" fill="none" />
                 `;
             } else if (type === 'B') {
-                // Bishop - High wizard pointed hat with sparkling peak gem
                 accessorySVG = `
                     <path d="M 32 30 L 50 -2 L 68 30 Z" fill="${accessoryColor}" />
                     <circle cx="50" cy="-2" r="5" fill="#facc15" />
                 `;
             } else if (type === 'Q') {
-                // Queen - Brilliant Royal Crown
                 accessorySVG = `
                     <path d="M 30 25 L 35 10 L 45 18 L 50 5 L 55 18 L 65 10 L 70 25 Z" fill="#facc15" stroke="#eab308" stroke-width="2"/>
                     <circle cx="50" cy="4" r="3" fill="#ef4444" />
                 `;
             } else if (type === 'K') {
-                // King - Heavy Imperial Crown with Cross
                 accessorySVG = `
                     <rect x="35" y="15" width="30" height="12" rx="2" fill="#eab308" />
                     <path d="M 32 15 L 35 2 L 50 10 L 65 2 L 68 15 Z" fill="#eab308" />
@@ -798,34 +832,19 @@
 
             return `
                 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Duck Nest Base/Stand -->
                     <ellipse cx="50" cy="85" rx="35" ry="10" fill="rgba(0,0,0,0.15)" />
-                    
-                    <!-- Wing -->
                     <path d="M 30 65 Q 15 50 35 48" stroke="${bodyColor}" stroke-width="4" fill="${bodyColor}" />
-                    
-                    <!-- Body -->
                     <ellipse cx="45" cy="65" rx="28" ry="20" fill="${bodyColor}" />
-                    
-                    <!-- Head -->
                     <circle cx="50" cy="38" r="18" fill="${bodyColor}" />
-                    
-                    <!-- Eye -->
                     <circle cx="56" cy="34" r="3" fill="#000" />
-                    
-                    <!-- Orange Beak -->
                     <path d="M 64 34 L 80 40 L 64 46 Z" fill="${beakColor}" />
-                    
-                    <!-- Blush Cheek -->
                     <circle cx="48" cy="42" r="4" fill="${cheekColor}" />
-                    
-                    <!-- Active Accessory Overlay -->
                     ${accessorySVG}
                 </svg>
             `;
         }
 
-        /* 4. SELECTION CONTROLLERS (Title Screen) */
+        /* 5. SELECTION CONTROLLERS (Title Screen) */
         function selectMode(mode) {
             gameMode = mode;
             document.querySelectorAll('.setup-card:first-child .option-btn').forEach(btn => btn.classList.remove('selected'));
@@ -848,7 +867,7 @@
             } else if (theme === 'cyber') {
                 r.style.setProperty('--board-light', '#1c1135');
                 r.style.setProperty('--board-dark', '#bc84ee');
-                r.style.setProperty('--board-highlight', 'rgba(220, 253, 139, 0.6)');
+                r.style.setProperty('--board-highlight', 'rgba(0, 255, 255, 0.6)');
                 r.style.setProperty('--bg-gradient', 'linear-gradient(135deg, #12072b 0%, #050112 100%)');
             } else if (theme === 'sanctuary') {
                 r.style.setProperty('--board-light', '#f1f5f9');
@@ -874,7 +893,7 @@
             playSound('tap');
         }
 
-        /* 5. PLAY ENGINE & MOVEMENT VALIDATION */
+        /* 6. PLAY ENGINE & MOVEMENT VALIDATION */
         function resetBoard() {
             board = JSON.parse(JSON.stringify(initialBoardSetup));
             currentTurn = 'white';
@@ -896,9 +915,7 @@
 
             document.getElementById('endgame-dialog').classList.remove('active');
             
-            // Initialize clocks
             initClock();
-
             updateSidebarHUD();
             drawBoard();
         }
@@ -920,18 +937,15 @@
                     square.dataset.row = r;
                     square.dataset.col = c;
 
-                    // Apply selected styling
                     if (selectedSquare && selectedSquare[0] === r && selectedSquare[1] === c) {
                         square.classList.add('selected');
                     }
 
-                    // Apply move history markers
                     if (previousMove && ((previousMove.from[0] === r && previousMove.from[1] === c) || 
                         (previousMove.to[0] === r && previousMove.to[1] === c))) {
                         square.classList.add('prev-move');
                     }
 
-                    // Check highlight
                     if (kingInCheck && r === kingPos[0] && c === kingPos[1]) {
                         square.classList.add('check');
                     }
@@ -940,17 +954,15 @@
                     if (pieceCode) {
                         const pieceDiv = document.createElement('div');
                         pieceDiv.classList.add('piece');
-                        pieceDiv.innerHTML = getPieceSVG(pieceCode);
+                        pieceDiv.innerHTML = getPieceHTML(pieceCode);
                         square.appendChild(pieceDiv);
                         square.classList.add('has-piece');
                     }
 
-                    // Highlights potential legal moves
                     if (highlightedMoves.some(m => m[0] === r && m[1] === c)) {
                         square.classList.add('highlighted');
                     }
 
-                    // Action triggers
                     square.addEventListener('click', () => handleSquareClick(r, c));
                     boardDiv.appendChild(square);
                 }
@@ -959,11 +971,10 @@
 
         function handleSquareClick(r, c) {
             if (gameEnded) return;
-            if (gameMode === 'ai' && currentTurn === 'black') return; // Freeze clicks during AI thought phase
+            if (gameMode === 'ai' && currentTurn === 'black') return;
 
             const piece = board[r][c];
 
-            // If we have an active piece selected and clicked a legal highlighted path
             if (selectedSquare && highlightedMoves.some(m => m[0] === r && m[1] === c)) {
                 const valids = getValidMoves(selectedSquare[0], selectedSquare[1]);
                 const move = valids.find(m => m.row === r && m.col === c);
@@ -972,7 +983,6 @@
                 selectedSquare = null;
                 highlightedMoves = [];
             } 
-            // Select our own pieces to show legal pathways
             else if (piece && piece.startsWith(currentTurn === 'white' ? 'w' : 'b')) {
                 selectedSquare = [r, c];
                 const valids = getValidMoves(r, c);
@@ -991,7 +1001,6 @@
             const color = piece.charAt(0);
             const target = board[toR][toC];
 
-            // Capture tracking
             if (target) {
                 if (target.startsWith('w')) {
                     capturedWhite.push(target);
@@ -1000,26 +1009,23 @@
                 }
             }
 
-            // Apply movement
             board[toR][toC] = piece;
             board[fromR][fromC] = null;
             previousMove = { from: [fromR, fromC], to: [toR, toC] };
 
             playSound('tap');
 
-            // Handle Castling
             if (isCastling) {
                 const rookRow = toR;
-                if (toC > fromC) { // Kingside
+                if (toC > fromC) {
                     board[rookRow][toC - 1] = board[rookRow][7];
                     board[rookRow][7] = null;
-                } else { // Queenside
+                } else {
                     board[rookRow][toC + 1] = board[rookRow][0];
                     board[rookRow][0] = null;
                 }
             }
 
-            // Update King Position & Castling Rights
             if (piece.endsWith('K')) {
                 if (color === 'w') {
                     whiteKingPosition = [toR, toC];
@@ -1038,7 +1044,6 @@
                 }
             }
 
-            // Handle Pawn Promotion
             if (piece.endsWith('P') && (toR === 0 || toR === 7)) {
                 if (gameMode === 'ai' && color === 'b') {
                     board[toR][toC] = 'bQ';
@@ -1057,16 +1062,12 @@
         function finishMoveAndSwitch() {
             if (gameEnded) return;
 
-            // Toggle turn structure
             currentTurn = currentTurn === 'white' ? 'black' : 'white';
             
             updateSidebarHUD();
             drawBoard();
-
-            // Evaluate Win/Loss constraints
             checkGameStates();
 
-            // Trigger AI move if appropriate
             if (gameMode === 'ai' && currentTurn === 'black' && !gameEnded) {
                 document.getElementById('turn-badge').innerHTML = `AI Thinking... <i class="fa-solid fa-spinner fa-spin"></i>`;
                 setTimeout(triggerAIMove, 250);
@@ -1091,8 +1092,8 @@
                     
                     const pieceCode = `${color}${type}`;
                     btn.innerHTML = `
-                        <div style="width: 32px; height: 32px; margin-right: 8px;">
-                            ${getPieceSVG(pieceCode)}
+                        <div style="width: 32px; height: 32px; margin-right: 8px; display: flex; align-items: center; justify-content: center;">
+                            ${getPieceHTML(pieceCode)}
                         </div>
                         ${names[type]}
                     `;
@@ -1112,21 +1113,17 @@
             
             document.querySelector('.side-panel').className = `side-panel turn-${currentTurn}`;
 
-            // Populate Captured Trophies elements
             const whiteTray = document.getElementById('captured-white');
             const blackTray = document.getElementById('captured-black');
             
-            // White captures black pieces (black duck SVGs)
             whiteTray.innerHTML = capturedBlack.map(code => {
-                return `<div style="width: 24px; height: 24px;">${getPieceSVG(code)}</div>`;
+                return `<div style="width: 24px; height: 24px; display: inline-block;">${getPieceHTML(code)}</div>`;
             }).join('');
             
-            // Black captures white pieces (white duck SVGs)
             blackTray.innerHTML = capturedWhite.map(code => {
-                return `<div style="width: 24px; height: 24px;">${getPieceSVG(code)}</div>`;
+                return `<div style="width: 24px; height: 24px; display: inline-block;">${getPieceHTML(code)}</div>`;
             }).join('');
 
-            // Hide/Show AI calculations stats row
             const aiRow = document.getElementById('ai-stats-row');
             if (aiRow) {
                 aiRow.style.display = gameMode === 'ai' ? 'block' : 'none';
@@ -1200,7 +1197,6 @@
                 case 'K': moves = getKingMoves(row, col, color); break;
             }
 
-            // Filter moves to prevent moving into check
             return moves.filter(move => {
                 const target = board[move.row][move.col];
                 board[move.row][move.col] = board[row][col];
@@ -1222,24 +1218,20 @@
         }
 
         function isSquareAttacked(r, c, attackerColor) {
-            // 1. Pawn Attacks
             const pDir = (attackerColor === 'w') ? -1 : 1;
             if (isInBounds(r - pDir, c - 1) && board[r - pDir][c - 1] === `${attackerColor}P`) return true;
             if (isInBounds(r - pDir, c + 1) && board[r - pDir][c + 1] === `${attackerColor}P`) return true;
 
-            // 2. Knight Attacks
             const knightMoves = [[-2, -1], [-2, 1], [-1, -2], [-1, 2], [1, -2], [1, 2], [2, -1], [2, 1]];
             for (const [dr, dc] of knightMoves) {
                 if (isInBounds(r + dr, c + dc) && board[r + dr][c + dc] === `${attackerColor}N`) return true;
             }
 
-            // 3. King Attacks (adjacent)
             const kingMoves = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
             for (const [dr, dc] of kingMoves) {
                 if (isInBounds(r + dr, c + dc) && board[r + dr][c + dc] === `${attackerColor}K`) return true;
             }
 
-            // 4. Sliding Straight (Rook/Queen)
             const straightDirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
             for (const [dr, dc] of straightDirs) {
                 for (let i = 1; i < 8; i++) {
@@ -1253,7 +1245,6 @@
                 }
             }
 
-            // 5. Sliding Diagonal (Bishop/Queen)
             const diagDirs = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
             for (const [dr, dc] of diagDirs) {
                 for (let i = 1; i < 8; i++) {
@@ -1275,16 +1266,13 @@
             const dir = (color === 'w') ? -1 : 1;
             const startRow = (color === 'w') ? 6 : 1;
 
-            // Forward 1
             if (isInBounds(row + dir, col) && !board[row + dir][col]) {
                 moves.push({ row: row + dir, col });
-                // Forward 2
                 if (row === startRow && isInBounds(row + 2 * dir, col) && !board[row + 2 * dir][col]) {
                     moves.push({ row: row + 2 * dir, col });
                 }
             }
 
-            // Capture diagonal
             [-1, 1].forEach(dc => {
                 const nr = row + dir;
                 const nc = col + dc;
@@ -1362,20 +1350,17 @@
                 }
             });
 
-            // Castling Rights
             const rights = castlingRights[color];
             if (!rights.kingMoved) {
                 const rIdx = (color === 'w') ? 7 : 0;
                 const opponent = (color === 'w') ? 'b' : 'w';
 
                 if (!isSquareAttacked(rIdx, 4, opponent)) {
-                    // Kingside Castling
                     if (!rights.rookRightMoved && !board[rIdx][5] && !board[rIdx][6]) {
                         if (!isSquareAttacked(rIdx, 5, opponent) && !isSquareAttacked(rIdx, 6, opponent)) {
                             moves.push({ row: rIdx, col: 6, isCastling: true });
                         }
                     }
-                    // Queenside Castling
                     if (!rights.rookLeftMoved && !board[rIdx][1] && !board[rIdx][2] && !board[rIdx][3]) {
                         if (!isSquareAttacked(rIdx, 3, opponent) && !isSquareAttacked(rIdx, 2, opponent)) {
                             moves.push({ row: rIdx, col: 2, isCastling: true });
@@ -1473,7 +1458,7 @@
             }, 100);
         }
 
-        // Piece-Square Positional Tables (PST) adapted to V2
+        // Positional Weight Tables (PST)
         const pawnPST = [
             [ 0,  0,  0,  0,  0,  0,  0,  0],
             [50, 50, 50, 50, 50, 50, 50, 50],
@@ -1573,7 +1558,6 @@
             const moves = getAllLegalMoves('black');
             if (moves.length === 0) return null;
 
-            // Move ordering: sort captures of high-value pieces first to hit faster alpha-beta cutoffs
             moves.sort((a, b) => {
                 const targetA = board[a.to[0]][a.to[1]];
                 const targetB = board[b.to[0]][b.to[1]];
@@ -1587,7 +1571,6 @@
             for (const move of moves) {
                 const snap = getBoardStateSnapshot();
 
-                // Simulate move
                 const piece = board[move.from[0]][move.from[1]];
                 board[move.to[0]][move.to[1]] = piece;
                 board[move.from[0]][move.from[1]] = null;
@@ -1606,10 +1589,9 @@
                 if (piece === 'bK') {
                     blackKingPosition = [move.to[0], move.to[1]];
                 } else if (piece === 'bP' && move.to[0] === 7) {
-                    board[move.to[0]][move.to[1]] = 'bQ'; // simulate pawn promotion
+                    board[move.to[0]][move.to[1]] = 'bQ';
                 }
 
-                // Minimax depth 2 (root is 1, total is depth 3)
                 const score = minimax(2, -Infinity, Infinity, false);
                 restoreBoardStateSnapshot(snap);
 
@@ -1621,7 +1603,6 @@
                 }
             }
 
-            // Select a random move from the equivalent highest scoring ones
             const selected = bestMoves[Math.floor(Math.random() * bestMoves.length)];
             return {
                 fromRow: selected.from[0],
@@ -1647,15 +1628,12 @@
                 const kingPos = (color === 'w') ? whiteKingPosition : blackKingPosition;
                 const opponent = (color === 'w') ? 'b' : 'w';
                 if (isSquareAttacked(kingPos[0], kingPos[1], opponent)) {
-                    // Checkmate
                     return isMaximizingPlayer ? -99999 + (3 - depth) : 99999 - (3 - depth);
                 } else {
-                    // Stalemate
                     return 0;
                 }
             }
 
-            // Sort moves
             moves.sort((a, b) => {
                 const targetA = board[a.to[0]][a.to[1]];
                 const targetB = board[b.to[0]][b.to[1]];
@@ -1695,7 +1673,7 @@
 
                     maxEval = Math.max(maxEval, ev);
                     alpha = Math.max(alpha, ev);
-                    if (beta <= alpha) break; // Prune
+                    if (beta <= alpha) break;
                 }
                 return maxEval;
             } else {
@@ -1729,7 +1707,7 @@
 
                     minEval = Math.min(minEval, ev);
                     beta = Math.min(beta, ev);
-                    if (beta <= alpha) break; // Prune
+                    if (beta <= alpha) break;
                 }
                 return minEval;
             }
