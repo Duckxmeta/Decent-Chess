@@ -693,14 +693,21 @@
             ['wR', 'wN', 'wB', 'wQ', 'wK', 'wB', 'wN', 'wR']
         ];
 
-        /* 2. DYNAMIC PATH CONFIGURATION FOR DUCK PIECES */
-        const POSSIBLE_IMAGE_PATHS = [
-            'assets/',
-            'pieces/',
-            'images/',
-            'img/',
-            ''
-        ];
+        /* 2. CHESS PIECE IMAGES DIRECT MAPPING */
+        const pieceImgUrls = {
+            'wP': 'https://i.imgur.com/WqEeGcV.png',
+            'bP': 'https://i.imgur.com/G8HI6jV.png',
+            'wN': 'https://i.imgur.com/aQPSdGo.png',
+            'bN': 'https://i.imgur.com/MVXiC6J.png',
+            'wB': 'https://i.imgur.com/HoxXFCB.png',
+            'bB': 'https://i.imgur.com/Kg8Z0Vv.png',
+            'wR': 'https://i.imgur.com/VaOAiw0.png',
+            'bR': 'https://i.imgur.com/xG4MoCY.png',
+            'wQ': 'https://i.imgur.com/ORYOBNe.png',
+            'bQ': 'https://i.imgur.com/atQD6jW.png',
+            'wK': 'https://i.imgur.com/safa3Uv.png',
+            'bK': 'https://i.imgur.com/h9NbkDA.png'
+        };
 
         /* 3. PROCEDURAL SOUND SYNTHESIS (Web Audio API) */
         let audioCtx = null;
@@ -752,95 +759,14 @@
             }
         }
 
-        /* 4. CHESS PIECE RENDERER (NATIVE CHANNELS + GRACEFUL VECTOR FALLBACK) */
+        /* 4. CHESS PIECE RENDERER (NATIVE CHANNELS) */
         function getPieceHTML(pieceCode) {
-            let pathIndex = 0;
-            const primaryPath = `${POSSIBLE_IMAGE_PATHS[pathIndex]}${pieceCode}.png`;
+            const url = pieceImgUrls[pieceCode];
+            const colorClass = pieceCode.startsWith('w') ? 'white-piece' : 'black-piece';
             return `
-                <img src="${primaryPath}" 
+                <img src="${url}" 
                      alt="${pieceCode}" 
-                     class="duck-piece-img"
-                     onerror="handlePieceLoadError(this, '${pieceCode}', ${pathIndex + 1})"/>
-            `;
-        }
-
-        // Global recovery callback for missing piece assets
-        window.handlePieceLoadError = function(imgElement, pieceCode, nextIndex) {
-            if (nextIndex < POSSIBLE_IMAGE_PATHS.length) {
-                imgElement.src = `${POSSIBLE_IMAGE_PATHS[nextIndex]}${pieceCode}.png`;
-                imgElement.setAttribute('onerror', `handlePieceLoadError(this, '${pieceCode}', ${nextIndex + 1})`);
-            } else {
-                const parent = imgElement.parentElement;
-                if (parent) {
-                    parent.innerHTML = getPieceFallbackSVG(pieceCode);
-                }
-            }
-        };
-
-        // Procedural Vector Duck pieces (Fallback when PNG files are missing)
-        function getPieceFallbackSVG(pieceCode) {
-            const isBlack = pieceCode.startsWith('b');
-            const type = pieceCode.substring(1);
-            
-            let bodyColor = isBlack ? "#334155" : "#fef08a";
-            let cheekColor = isBlack ? "#475569" : "#fca5a5";
-            let beakColor = "#f97316";
-            let accessoryColor = isBlack ? "#d9f99d" : "#c084fc";
-            
-            if (boardTheme === 'cyber') {
-                bodyColor = isBlack ? "#4c1d95" : "#06b6d4";
-                accessoryColor = isBlack ? "#00ffff" : "#ff00ff";
-            } else if (boardTheme === 'sanctuary') {
-                bodyColor = isBlack ? "#334155" : "#f8fafc";
-                accessoryColor = "#38bdf8";
-            }
-
-            let accessorySVG = "";
-            if (type === 'P') {
-                accessorySVG = `<circle cx="50" cy="35" r="5" fill="${accessoryColor}" />`;
-            } else if (type === 'R') {
-                accessorySVG = `
-                    <rect x="35" y="10" width="30" height="20" rx="3" fill="#64748b" />
-                    <rect x="32" y="5" width="8" height="10" fill="#64748b" />
-                    <rect x="46" y="5" width="8" height="10" fill="#64748b" />
-                    <rect x="60" y="5" width="8" height="10" fill="#64748b" />
-                `;
-            } else if (type === 'N') {
-                accessorySVG = `
-                    <ellipse cx="50" cy="28" rx="22" ry="18" fill="#475569" />
-                    <rect x="42" y="24" width="16" height="5" fill="#1e293b" />
-                    <path d="M 50 10 Q 65 -5 70 10" stroke="${accessoryColor}" stroke-width="6" fill="none" />
-                `;
-            } else if (type === 'B') {
-                accessorySVG = `
-                    <path d="M 32 30 L 50 -2 L 68 30 Z" fill="${accessoryColor}" />
-                    <circle cx="50" cy="-2" r="5" fill="#facc15" />
-                `;
-            } else if (type === 'Q') {
-                accessorySVG = `
-                    <path d="M 30 25 L 35 10 L 45 18 L 50 5 L 55 18 L 65 10 L 70 25 Z" fill="#facc15" stroke="#eab308" stroke-width="2"/>
-                    <circle cx="50" cy="4" r="3" fill="#ef4444" />
-                `;
-            } else if (type === 'K') {
-                accessorySVG = `
-                    <rect x="35" y="15" width="30" height="12" rx="2" fill="#eab308" />
-                    <path d="M 32 15 L 35 2 L 50 10 L 65 2 L 68 15 Z" fill="#eab308" />
-                    <line x1="50" y1="-5" x2="50" y2="5" stroke="#eab308" stroke-width="4" />
-                    <line x1="45" y1="0" x2="55" y2="0" stroke="#eab308" stroke-width="4" />
-                `;
-            }
-
-            return `
-                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <ellipse cx="50" cy="85" rx="35" ry="10" fill="rgba(0,0,0,0.15)" />
-                    <path d="M 30 65 Q 15 50 35 48" stroke="${bodyColor}" stroke-width="4" fill="${bodyColor}" />
-                    <ellipse cx="45" cy="65" rx="28" ry="20" fill="${bodyColor}" />
-                    <circle cx="50" cy="38" r="18" fill="${bodyColor}" />
-                    <circle cx="56" cy="34" r="3" fill="#000" />
-                    <path d="M 64 34 L 80 40 L 64 46 Z" fill="${beakColor}" />
-                    <circle cx="48" cy="42" r="4" fill="${cheekColor}" />
-                    ${accessorySVG}
-                </svg>
+                     class="duck-piece-img ${colorClass}"/>
             `;
         }
 
