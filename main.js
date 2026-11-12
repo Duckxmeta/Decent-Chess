@@ -300,7 +300,8 @@ function handlePointerClick(e) {
       }
       if(selectedPiece && !colorCheck(obj,currentMover)){
         let nextMove=null;
-        if (obj.name.includes("Piece")) {
+        if (obj.userData && obj.userData.pieceRef) obj = obj.userData.pieceRef;
+        if (obj.name && obj.name.includes("Piece")) {
           nextMove=obj.userData.NowAt;
         }else if(obj.name.includes("Square")){
           let temp=obj.name.split("_")
@@ -1233,6 +1234,14 @@ function load3D() {
                 model.rotation.y = isWhite ? 0 : Math.PI;
                 child.parent.add(model);
                 child.userData.duckModel = model;
+                // Make the model clickable
+                model.userData.pieceRef = child;
+                model.traverse(m => {
+                  if (m.isMesh) {
+                    m.userData.pieceRef = child;
+                    targetObjects.push(m);
+                  }
+                });
               });
             }
             if(!(DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]])){
