@@ -1227,7 +1227,7 @@ function load3D() {
                 const model = gltf.scene;
                 model.position.copy(child.position);
                 model.position.y += 0.05;
-                model.scale.setScalar(0.18);
+                model.scale.setScalar(0.055);
                 child.parent.add(model);
                 child.userData.duckModel = model;
               });
