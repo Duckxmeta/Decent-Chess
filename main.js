@@ -1207,19 +1207,17 @@ function load3D() {
             const modelKey = colorPrefix + "_" + type;
             const glbPath = glbModels[modelKey];
 
+            // Always hide the original mesh
+            child.visible = false;
             if (glbPath) {
               gltfLoader.load(glbPath, (gltf) => {
                 const model = gltf.scene;
                 model.position.copy(child.position);
                 model.position.y += 0.05;
-                model.scale.setScalar(0.15);
+                model.scale.setScalar(0.18);
                 child.parent.add(model);
-                child.visible = false;
                 child.userData.duckModel = model;
               });
-            } else {
-              // Hide pieces that don't have a 3D model yet
-              child.visible = false;
             }
             if(!(DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]])){
               DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]]=child;
