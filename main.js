@@ -1227,7 +1227,10 @@ function load3D() {
                 const model = gltf.scene;
                 model.position.copy(child.position);
                 model.position.y += 0.05;
-                model.scale.setScalar(0.055);
+                model.scale.setScalar(0.0275);
+                // Face the center of the board
+                const isWhite = child.name.includes("White");
+                model.rotation.y = isWhite ? 0 : Math.PI;
                 child.parent.add(model);
                 child.userData.duckModel = model;
               });
