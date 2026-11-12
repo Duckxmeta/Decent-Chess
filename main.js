@@ -10,6 +10,14 @@ import { EXRLoader } from 'three/addons/loaders/EXRLoader.js';
 let renderer, camera, scene, controls, pmremGenerator;
 
 // Duck piece textures
+
+const glbModels = {
+  "White-Piece_P": "assets/models3d/wP.glb",
+  "Black-Piece_P": "assets/models3d/bP.glb",
+  "White-Piece_Kn": "assets/models3d/wN.glb",
+};
+const gltfLoader = new GLTFLoader();
+
 const duckTextures = {
   "White-Piece_P": "assets/ducks/wP.jpg",
   "White-Piece_Kn": "assets/ducks/wN.jpg",
@@ -498,6 +506,10 @@ function MoveAnimation(PieceToMove,fromSquare,ToSquare,delay,jump){
           if (PieceToMove.userData.duckPlane) {
             PieceToMove.userData.duckPlane.position.copy(PieceToMove.position);
             PieceToMove.userData.duckPlane.position.y += 0.18;
+          }
+          if (PieceToMove.userData.duckModel) {
+            PieceToMove.userData.duckModel.position.copy(PieceToMove.position);
+            PieceToMove.userData.duckModel.position.y += 0.05;
           }
         },
         z: ToSquare.userData.MainPosition.z,
@@ -1186,27 +1198,43 @@ function load3D() {
             child.userData.color=testvar[0].split("-")[0];
             child.userData.Name=testvar[1]
 
-            // Replace with duck billboard
+            // Prefer real 3D GLB if available, otherwise billboard
             const nameParts = child.name.split("_");
             const colorPrefix = nameParts[0]; // White-Piece or Black-Piece
             let type = nameParts[1] || "P";
             if (type.startsWith("Kn")) type = "Kn";
             else type = type[0];
-            const duckKey = colorPrefix.replace("-Piece", "") + "-Piece_" + type;
-            const texPath = duckTextures[duckKey] || duckTextures["White-Piece_P"];
-            if (texPath) {
-              const tex = duckTexLoader.load(texPath);
-              tex.colorSpace = THREE.SRGBColorSpace;
-              const plane = new THREE.Mesh(
-                new THREE.PlaneGeometry(0.4, 0.4),
-                new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide })
-              );
-              plane.position.copy(child.position);
-              plane.position.y += 0.18;
-              plane.lookAt(new THREE.Vector3(0, 5, 5));
-              child.parent.add(plane);
-              child.visible = false;
-              child.userData.duckPlane = plane;
+            const modelKey = colorPrefix + "_" + type;
+            const glbPath = glbModels[modelKey];
+
+            if (glbPath) {
+              gltfLoader.load(glbPath, (gltf) => {
+                const model = gltf.scene;
+                model.position.copy(child.position);
+                model.position.y += 0.05;
+                model.scale.setScalar(0.15);
+                child.parent.add(model);
+                child.visible = false;
+                child.userData.duckModel = model;
+              });
+            } else {
+              // Fallback billboard
+              const duckKey = colorPrefix.replace("-Piece", "") + "-Piece_" + type;
+              const texPath = duckTextures[duckKey] || duckTextures["White-Piece_P"];
+              if (texPath) {
+                const tex = duckTexLoader.load(texPath);
+                tex.colorSpace = THREE.SRGBColorSpace;
+                const plane = new THREE.Mesh(
+                  new THREE.PlaneGeometry(0.4, 0.4),
+                  new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide })
+                );
+                plane.position.copy(child.position);
+                plane.position.y += 0.18;
+                plane.lookAt(new THREE.Vector3(0, 5, 5));
+                child.parent.add(plane);
+                child.visible = false;
+                child.userData.duckPlane = plane;
+              }
             }
             if(!(DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]])){
               DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]]=child;
