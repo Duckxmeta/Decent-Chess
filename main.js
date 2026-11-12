@@ -539,6 +539,12 @@ function MoveAnimation(PieceToMove,fromSquare,ToSquare,delay,jump){
           duration: duration,
           delay:delay,
           ease: "power4",
+          onUpdate: function() {
+            if (PieceToMove.userData.duckModel) {
+              PieceToMove.userData.duckModel.position.copy(PieceToMove.position);
+              PieceToMove.userData.duckModel.position.y += 0.05;
+            }
+          }
       });
       gsap.to(PieceToMove.position, {
         y: ToSquare.userData.MainPosition.y + 0.02,
