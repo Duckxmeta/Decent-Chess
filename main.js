@@ -1084,6 +1084,18 @@ function load3D() {
     .setTranscoderPath("jsm/libs/basis/")
     .detectSupport(renderer);
 
+    
+    // Safety: start the game even if some textures are slow
+    setTimeout(() => {
+      if (!window._gameStarted) {
+        window._gameStarted = true;
+        renderer.compile(scene, camera);
+        window._gameStarted = true;
+                  renderer.setAnimationLoop(animate);
+        console.log("Forced start after timeout");
+      }
+    }, 8000);
+
     loader.load(
       "assets/ChessGLB.glb",
       (gltf) => {
@@ -1170,6 +1182,7 @@ function load3D() {
                 texturesLoaded++;
                 if (texturesLoaded === texturesToLoad) {
                   renderer.compile(scene, camera);
+                  window._gameStarted = true;
                   renderer.setAnimationLoop(animate);
                 }
               });
@@ -1283,7 +1296,8 @@ function load3D() {
         setTimeout(()=>{TurnDisplay(0)}, 1000);
         if (texturesToLoad === 0) {
           renderer.compile(scene, camera);
-          renderer.setAnimationLoop(animate);
+          window._gameStarted = true;
+                  renderer.setAnimationLoop(animate);
           
         }
       },
