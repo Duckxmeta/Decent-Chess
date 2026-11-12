@@ -1218,23 +1218,8 @@ function load3D() {
                 child.userData.duckModel = model;
               });
             } else {
-              // Fallback billboard
-              const duckKey = colorPrefix.replace("-Piece", "") + "-Piece_" + type;
-              const texPath = duckTextures[duckKey] || duckTextures["White-Piece_P"];
-              if (texPath) {
-                const tex = duckTexLoader.load(texPath);
-                tex.colorSpace = THREE.SRGBColorSpace;
-                const plane = new THREE.Mesh(
-                  new THREE.PlaneGeometry(0.4, 0.4),
-                  new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.05, side: THREE.DoubleSide })
-                );
-                plane.position.copy(child.position);
-                plane.position.y += 0.18;
-                plane.lookAt(new THREE.Vector3(0, 5, 5));
-                child.parent.add(plane);
-                child.visible = false;
-                child.userData.duckPlane = plane;
-              }
+              // Hide pieces that don't have a 3D model yet
+              child.visible = false;
             }
             if(!(DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]])){
               DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]]=child;
