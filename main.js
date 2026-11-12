@@ -1391,6 +1391,15 @@ function load3D() {
   
 }
 
+
+// Force loading screen to finish
+setTimeout(() => {
+  if (typeof Start3DPage === "function") {
+    Start3DPage();
+    console.log("Forced Start3DPage");
+  }
+}, 3000);
+
 function Start3DPage() {
   document.getElementById(
     "LoadInnerText"
