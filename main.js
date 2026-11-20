@@ -37,6 +37,24 @@ const duckTexLoader = new THREE.TextureLoader();
 let TurnDis=[];
 const Sizes = { Width: window.innerWidth, Height: window.innerHeight };
 const targetObjects = [];
+
+// 2D duck sprites for 2-player
+const duckSprites = {
+  "White-Piece_P": "assets/models 2d/WPchess.png",
+  "White-Piece_Kn": "assets/models 2d/Wknight.png",
+  "White-Piece_B": "assets/models 2d/Wbishop.png",
+  "White-Piece_R": "assets/models 2d/Wrook.png",
+  "White-Piece_Q": "assets/models 2d/Wqueen.png",
+  "White-Piece_K": "assets/models 2d/Wking.png",
+  "Black-Piece_P": "assets/models 2d/BPchess.png",
+  "Black-Piece_Kn": "assets/models 2d/Bknight.png",
+  "Black-Piece_B": "assets/models 2d/Bbishop.png",
+  "Black-Piece_R": "assets/models 2d/Brook.png",
+  "Black-Piece_Q": "assets/models 2d/Bqueen.png",
+  "Black-Piece_K": "assets/models 2d/Bking.png",
+};
+const spriteLoader = new THREE.TextureLoader();
+
 const ChessPieces = [];
 const Squares=[];
 const DiffPieces=[]
@@ -371,6 +389,9 @@ function PromotionCheck(from,to,pro){
         <button onclick="savePromotion('${from}','${to}','b')">♗ Bishop</button>
         <button onclick="savePromotion('${from}','${to}','n')">♘ Knight</button>`;
     return;
+  }
+  if (typeof window.sendMove === "function") {
+    window.sendMove(from, to, promoPiece);
   }
   return MoveTo(from,to,promoPiece);
 }
@@ -1218,36 +1239,29 @@ function load3D() {
             child.userData.color=testvar[0].split("-")[0];
             child.userData.Name=testvar[1]
 
-            // Prefer real 3D GLB if available, otherwise billboard
+            // 2D billboard
+            child.visible = false;
             const nameParts = child.name.split("_");
-            const colorPrefix = nameParts[0]; // White-Piece or Black-Piece
+            const colorPrefix = nameParts[0];
             let type = nameParts[1] || "P";
             if (type.startsWith("Kn")) type = "Kn";
             else type = type[0];
-            const modelKey = colorPrefix + "_" + type;
-            const glbPath = glbModels[modelKey];
-
-            // Always hide the original mesh
-            child.visible = false;
-            if (glbPath) {
-              gltfLoader.load(glbPath, (gltf) => {
-                const model = gltf.scene;
-                model.position.copy(child.position);
-                model.position.y += 0.05;
-                model.scale.setScalar(0.0275);
-                // Face the center of the board
-                const isWhite = child.name.includes("White");
-                model.rotation.y = isWhite ? 0 : Math.PI;
-                child.parent.add(model);
-                child.userData.duckModel = model;
-                // Make the model clickable
-                model.userData.pieceRef = child;
-                model.traverse(m => {
-                  if (m.isMesh) {
-                    m.userData.pieceRef = child;
-                    targetObjects.push(m);
-                  }
-                });
+            const spriteKey = colorPrefix + "_" + type;
+            const texPath = duckSprites[spriteKey];
+            if (texPath) {
+              const tex = spriteLoader.load(texPath);
+              tex.colorSpace = THREE.SRGBColorSpace;
+              const plane = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.22, 0.22),
+                new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: 0.1, side: THREE.DoubleSide })
+              );
+              plane.position.copy(child.position);
+              plane.position.y += 0.12;
+              child.parent.add(plane);
+              child.userData.duckPlane = plane;
+              plane.userData.pieceRef = child;
+              targetObjects.push(plane);
+            }
               });
             }
             if(!(DiffPieces[testvar[0].split("-")[0]+"_"+testvar[1]])){

@@ -62,11 +62,67 @@
         stopFacts()
         document.getElementById("LoadingBox").style.justifyContent='center';
         document.getElementById("LoadingBox").innerHTML=`
-          <div>
-            <div><button class="btn options" onclick="ModeSet(0)"><i class="animation"></i>1 Vs 1<i class="animation"></i></button></div>
-            <div><button class="btn options" onclick="VsBot()"><i class="animation"></i>You Vs Bot<i class="animation"></i></button></div>
-            <div><button class="btn options" onclick="ModeSet(3)"><i class="animation"></i>View Only<i class="animation"></i></button></div>
+          <div style="text-align:center;color:white;">
+            <h2>Duck Chess — Invite a Friend</h2>
+            <div style="margin:16px 0;">
+              <button class="btn options" onclick="createRoom()"><i class="animation"></i>Create Room<i class="animation"></i></button>
+            </div>
+            <div style="margin:16px 0;">
+              <input id="roomCodeInput" placeholder="Enter invite code" style="padding:8px;border-radius:6px;border:none;width:180px;text-align:center;font-size:16px;">
+              <button class="btn options" onclick="joinRoom()" style="margin-left:8px;"><i class="animation"></i>Join<i class="animation"></i></button>
+            </div>
+            <p id="roomStatus" style="margin-top:12px;color:#ccc;"></p>
           </div>`;
+      }
+
+      let peer = null;
+      let conn = null;
+      let myColor = "w";
+
+      function createRoom() {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        peer = new Peer(code);
+        peer.on("open", id => {
+          document.getElementById("roomStatus").innerHTML = "Invite code: <b>" + id + "</b><br>Waiting for opponent...";
+          peer.on("connection", c => {
+            conn = c;
+            setupConn();
+            document.getElementById("roomStatus").innerHTML = "Opponent connected! You are White.";
+            myColor = "w";
+            ModeSet(0);
+          });
+        });
+      }
+
+      function joinRoom() {
+        const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
+        if (!code) return;
+        peer = new Peer();
+        peer.on("open", () => {
+          conn = peer.connect(code);
+          conn.on("open", () => {
+            setupConn();
+            document.getElementById("roomStatus").innerHTML = "Connected! You are Black.";
+            myColor = "b";
+            ModeSet(0);
+          });
+        });
+      }
+
+      function setupConn() {
+        conn.on("data", data => {
+          if (data.type === "move") {
+            // Apply remote move
+            if (typeof MoveTo === "function") {
+              MoveTo(data.from, data.to, data.promo || "q");
+            }
+          }
+        });
+        window.sendMove = (from, to, promo) => {
+          if (conn && conn.open) {
+            conn.send({ type: "move", from, to, promo: promo || "q" });
+          }
+        };
       }
       function ModeSet(Mode){
         document.getElementById("LoadingBox").classList.add("Open");
@@ -162,7 +218,8 @@
       }
     </script>
 
-    <script type="module" src="main.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script type="module" src="main.js"></script>
     <script
       type="module"
       src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
