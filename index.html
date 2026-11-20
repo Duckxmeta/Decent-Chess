@@ -1,232 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>3D Chess Game</title>
-    <meta charset="utf-8" />
-    <link rel="shortcut icon" href="assets/favicon.ico" type="image/x-icon">
-    <meta property="og:image" content="assets/favicon.ico">
-    <meta name="description" content="A fully interactive 3D Chess Game built using Three.js and GSAP, featuring lifelike 3D chess pieces and smooth animations. The game is powered by chess.js for accurate chess rules and move validation, allowing players to enjoy a realistic chess experience directly in the browser.">
-    <meta property="og:title" content="3D Chess game">
-    <meta property="og:description" content="A fully interactive 3D Chess Game built using Three.js and GSAP, featuring lifelike 3D chess pieces and smooth animations. The game is powered by chess.js for accurate chess rules and move validation, allowing players to enjoy a realistic chess experience directly in the browser.">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" href="assets/Logo192x192.png">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js"></script>
-    <meta
-      name="viewport"
-      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
-    />
-    <link type="text/css" rel="stylesheet" href="style.css" />
-    <style>
-      body {
-        background-color: #02184a;
-        color: #000;
-      }
-
-      a {
-        color: #2983ff;
-      }
-    </style>
-  </head>
-
-  <body>
-    <button class="ViewPoint" onclick="CameraTop()">
-      <ion-icon name="color-wand-outline"></ion-icon>
-    </button>
-    <button class="Reset" onclick="ReloadGame()">
-      <ion-icon name="refresh-outline"></ion-icon>
-    </button>
-    <div id="LoadingBox">
-      <p style="opacity: 0">Loader Text</p>
-      <p class="facts active none" style="opacity: 0;" id="factstemp">...</p>
-      <div id="LoadInnerText">
-        <div>
-          <button class="loadButton">Loading...</button>
-        </div>
-      </div>
-      <p id="facts" class="facts"></p>
-      <p id="fingers">...</p>
+<head>
+  <meta charset="UTF-8" />
+  <title>Duck Chess — 2 Player</title>
+  <style>
+    body { margin: 0; background: #1a1a1a; color: white; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    #board { width: min(90vw, 560px); height: min(90vw, 560px); display: grid; grid-template-columns: repeat(8, 1fr); border: 8px solid #5c4033; margin: 20px auto; }
+    .square { display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
+    .light { background: #f0d9b5; }
+    .dark { background: #b58863; }
+    .piece { width: 80%; height: 80%; background-size: contain; background-repeat: no-repeat; background-position: center; pointer-events: none; }
+    .selected { outline: 3px solid #ffd700; }
+    .legal { background: rgba(0, 200, 0, 0.35) !important; }
+    #ui { text-align: center; margin: 10px; }
+    input, button { padding: 8px 14px; font-size: 16px; margin: 4px; border-radius: 6px; border: none; }
+    button { background: #4caf50; color: white; cursor: pointer; }
+    #status { margin: 8px; font-size: 18px; }
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <h1>Duck Chess</h1>
+    <div id="lobby">
+      <button onclick="createRoom()">Create Room</button>
+      <br>
+      <input id="code" placeholder="Invite code" />
+      <button onclick="joinRoom()">Join</button>
+      <p id="roomStatus"></p>
     </div>
-    <div id="container"></div>
+    <div id="status"></div>
+  </div>
+  <div id="board"></div>
 
-    <div id="celebrate">
-      <button onclick="WinnerShowCase()">Celebrate</button>
-    </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script>
+    const game = new Chess();
+    let selected = null;
+    let myColor = null;
+    let peer, conn;
+    const boardEl = document.getElementById("board");
 
-    <div id="promosion" >
-      
-    </div>
+    const sprites = {
+      wP: "assets/models 2d/WPchess.png",
+      wN: "assets/models 2d/Wknight.png",
+      wB: "assets/models 2d/Wbishop.png",
+      wR: "assets/models 2d/Wrook.png",
+      wQ: "assets/models 2d/Wqueen.png",
+      wK: "assets/models 2d/Wking.png",
+      bP: "assets/models 2d/BPchess.png",
+      bN: "assets/models 2d/Bknight.png",
+      bB: "assets/models 2d/Bbishop.png",
+      bR: "assets/models 2d/Brook.png",
+      bQ: "assets/models 2d/Bqueen.png",
+      bK: "assets/models 2d/Bking.png",
+    };
 
-    <div id="info"></div>
-    <script>
-      function active() {
-        stopFacts()
-        document.getElementById("LoadingBox").style.justifyContent='center';
-        document.getElementById("LoadingBox").innerHTML=`
-          <div style="text-align:center;color:white;">
-            <h2>Duck Chess — Invite a Friend</h2>
-            <div style="margin:16px 0;">
-              <button class="btn options" onclick="createRoom()"><i class="animation"></i>Create Room<i class="animation"></i></button>
-            </div>
-            <div style="margin:16px 0;">
-              <input id="roomCodeInput" placeholder="Enter invite code" style="padding:8px;border-radius:6px;border:none;width:180px;text-align:center;font-size:16px;">
-              <button class="btn options" onclick="joinRoom()" style="margin-left:8px;"><i class="animation"></i>Join<i class="animation"></i></button>
-            </div>
-            <p id="roomStatus" style="margin-top:12px;color:#ccc;"></p>
-          </div>`;
-      }
-
-      let peer = null;
-      let conn = null;
-      let myColor = "w";
-
-      function createRoom() {
-        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-        peer = new Peer(code);
-        peer.on("open", id => {
-          document.getElementById("roomStatus").innerHTML = "Invite code: <b>" + id + "</b><br>Waiting for opponent...";
-          peer.on("connection", c => {
-            conn = c;
-            setupConn();
-            document.getElementById("roomStatus").innerHTML = "Opponent connected! You are White.";
-            myColor = "w";
-            ModeSet(0);
-          });
-        });
-      }
-
-      function joinRoom() {
-        const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
-        if (!code) return;
-        peer = new Peer();
-        peer.on("open", () => {
-          conn = peer.connect(code);
-          conn.on("open", () => {
-            setupConn();
-            document.getElementById("roomStatus").innerHTML = "Connected! You are Black.";
-            myColor = "b";
-            ModeSet(0);
-          });
-        });
-      }
-
-      function setupConn() {
-        conn.on("data", data => {
-          if (data.type === "move") {
-            // Apply remote move
-            if (typeof MoveTo === "function") {
-              MoveTo(data.from, data.to, data.promo || "q");
-            }
+    function render() {
+      boardEl.innerHTML = "";
+      const board = game.board();
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const sq = document.createElement("div");
+          sq.className = "square " + ((r + c) % 2 === 0 ? "light" : "dark");
+          const square = "abcdefgh"[c] + (8 - r);
+          sq.dataset.square = square;
+          const piece = board[r][c];
+          if (piece) {
+            const img = document.createElement("div");
+            img.className = "piece";
+            img.style.backgroundImage = `url('${sprites[piece.color + piece.type.toUpperCase()] || ""}')`;
+            sq.appendChild(img);
           }
+          sq.onclick = () => onSquareClick(square);
+          boardEl.appendChild(sq);
+        }
+      }
+      document.getElementById("status").textContent = game.game_over()
+        ? (game.in_checkmate() ? "Checkmate" : "Draw")
+        : (game.turn() === "w" ? "White" : "Black") + " to move";
+    }
+
+    function onSquareClick(square) {
+      if (myColor && game.turn() !== myColor) return;
+      if (selected) {
+        const moves = game.moves({ square: selected, verbose: true });
+        const move = moves.find(m => m.to === square);
+        if (move) {
+          game.move({ from: selected, to: square, promotion: "q" });
+          if (conn && conn.open) conn.send({ from: selected, to: square });
+          selected = null;
+          render();
+          return;
+        }
+      }
+      const piece = game.get(square);
+      if (piece && piece.color === game.turn()) {
+        selected = square;
+        highlightLegal(square);
+      } else {
+        selected = null;
+        render();
+      }
+    }
+
+    function highlightLegal(square) {
+      render();
+      const moves = game.moves({ square, verbose: true });
+      document.querySelectorAll(".square").forEach(el => {
+        if (el.dataset.square === square) el.classList.add("selected");
+        if (moves.some(m => m.to === el.dataset.square)) el.classList.add("legal");
+      });
+    }
+
+    function createRoom() {
+      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      peer = new Peer(code);
+      peer.on("open", id => {
+        document.getElementById("roomStatus").innerHTML = "Invite code: <b>" + id + "</b><br>Waiting for opponent...";
+        peer.on("connection", c => {
+          conn = c;
+          myColor = "w";
+          setupConn();
+          document.getElementById("roomStatus").textContent = "Connected — you are White";
+          document.getElementById("lobby").style.display = "none";
+          render();
         });
-        window.sendMove = (from, to, promo) => {
-          if (conn && conn.open) {
-            conn.send({ type: "move", from, to, promo: promo || "q" });
-          }
-        };
-      }
-      function ModeSet(Mode){
-        document.getElementById("LoadingBox").classList.add("Open");
-        setBotMode(Mode)
-      }
+      });
+    }
 
+    function joinRoom() {
+      const code = document.getElementById("code").value.trim().toUpperCase();
+      if (!code) return;
+      peer = new Peer();
+      peer.on("open", () => {
+        conn = peer.connect(code);
+        conn.on("open", () => {
+          myColor = "b";
+          setupConn();
+          document.getElementById("roomStatus").textContent = "Connected — you are Black";
+          document.getElementById("lobby").style.display = "none";
+          render();
+        });
+      });
+    }
 
+    function setupConn() {
+      conn.on("data", data => {
+        game.move({ from: data.from, to: data.to, promotion: "q" });
+        render();
+      });
+    }
 
-      function VsBot(){
-        document.getElementById("LoadingBox").innerHTML=`
-          <div>
-            <p style="margin: 0;background-color: rgba(0, 0, 0, 0.596);border-radius: 10px;">Play us</p>
-            <div><button class="btn options" onclick="ModeSet(2)" style="color: black;background-color: white;"><i class=""></i>White<i class=""></i></button></div>
-            <div><button class="btn options" onclick="ModeSet(1)"><i class=""></i>Black<i class=""></i></button></div>
-          </div>`
-      }
-
-      window.addEventListener("load", function () {
-        const instruction = document.getElementById("fingers");
-
-        if ("ontouchstart" in window || navigator.maxTouchPoints > 0) {
-          instruction.textContent = "Use 2 fingers to navigate";
-        } else {
-          instruction.textContent = "Use mouse to navigate";
-        }
-        load3D();
-        // active()
-      }); 
-      const facts = [
-        "The longest official chess game lasted 269 moves.",
-        "The word 'checkmate' comes from Persian 'shah mat' – 'the king is dead'.",
-        "In 1989, a computer beat a human master for the first time.",
-        "The second book ever printed in English was about chess.",
-        "There are more possible chess games than atoms in the universe.",
-        "Bobby Fischer once played 50 simultaneous games – and won them all.",
-        "The first mechanical chess clock was invented in 1883.",
-        "A knight on the rim is considered dim – harder to use effectively.",
-        "In 2003, Kasparov drew against the chess computer 'Deep Junior'.",
-        "The first computer to beat a world champion was Deep Blue in 1997.",
-        "Blindfold chess masters can play dozens of games without seeing boards.",
-        "The longest possible game under 50-move rule is 5949 moves.",
-        "Pawn promotion doesn’t have to be a queen – it can be any piece.",
-        "Castling was introduced in the 1500s to speed up the game.",
-        "In 1924, the International Chess Federation (FIDE) was founded.",
-        "World champion Emanuel Lasker held his title for 27 years.",
-        "You can checkmate with just two bishops and a king.",
-        "The knight’s tour puzzle is over 1000 years old.",
-        "Chess boxing is a real sport – alternating rounds of chess and boxing.",
-        "In 1972, the Fischer-Spassky match was called the 'Match of the Century'."
-      ];
-
-      let shuffledFacts = [...facts];
-      let factIndex = 0;
-      let factInterval = null;
-
-      function shuffleFacts() {
-        shuffledFacts = facts.sort(() => Math.random() - 0.5);
-        factIndex = 0;
-      }
-
-      function showFact() {
-        if (factIndex >= shuffledFacts.length-1) {
-          shuffleFacts(); 
-        }
-        document.getElementById("facts").classList.remove("active")
-        
-        setTimeout(()=>{
-          document.getElementById("factstemp").innerText=document.getElementById("facts").innerText = shuffledFacts[factIndex];
-          document.getElementById("facts").classList.add("active")
-        },300)
-        factIndex++;
-      }
-
-      function startFacts() {
-        shuffleFacts();
-        showFact();
-        factInterval = setInterval(showFact, 10000); 
-      }
-
-      function stopFacts() {
-        clearInterval(factInterval);
-      }
-      startFacts();
-    </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-    <script type="importmap">
-      {
-        "imports": {
-          "three": "./build/three.module.js",
-          "three/addons/": "./jsm/"
-        }
-      }
-    </script>
-
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<script type="module" src="main.js"></script>
-    <script
-      type="module"
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
-    ></script>
-    <script
-      nomodule
-      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
-    ></script>
-  </body>
+    render();
+  </script>
+</body>
 </html>
